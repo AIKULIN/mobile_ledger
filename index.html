@@ -9,12 +9,22 @@
         h1, h2 { text-align: center; }
         form, .stats, .tools { margin-bottom: 1em; }
         input, select, button {
-            width: 100%; padding: 10px; margin-top: 5px;
-            font-size: 16px; border-radius: 5px; border: 1px solid #ccc;
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+        .entry-list {
+            padding: 0;
         }
         .entry-list li {
-            background: #fff; margin-bottom: 5px; padding: 10px;
-            border-radius: 5px; display: flex; justify-content: space-between;
+            background: #fff;
+            padding: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
         }
         .income { color: green; } .expense { color: red; }
         .tools button { margin-bottom: 5px; }
@@ -24,14 +34,36 @@
             color: white;
             font-size: 16px; border-radius: 5px; border: 1px solid #ccc;
         }
+        .total-balance {
+            padding: 0;
+        }
+        .total-balance li {
+            list-style: none;
+            text-align: left;
+            font-size:18px;
+            font-weight:bold;
+        }
+        .category-manager-list {
+            list-style:none;
+            padding:0;
+        }
+        .category-manager-list li {
+            height: 50px;
+        }
+        .mb1 {
+            margin-bottom: 1em;
+        }
+        .mt1 {
+            margin-top: 1em;
+        }
     </style>
 </head>
 <body>
 
 <h1>手機記帳本</h1>
-<div id="totalBalance" style="text-align:center; font-size:18px; margin-bottom:1em; font-weight:bold;"></div>
+<ul id="totalBalance" class="total-balance"></ul>
 
-<div style="margin-bottom: 1em;">
+<div class="mb1">
     <label for="calendar">選擇日期</label>
     <input type="date" id="calendar" onchange="renderEntries()">
     <button onclick="clearCalendar()">全部顯示</button>
@@ -53,25 +85,25 @@
     </select>
     <button type="submit">新增記錄</button>
 </form>
-<div style="margin-bottom: 1em;">
+<div class="mb1">
     <label for="newCategory">新增分類（會依收入/支出分類）</label>
     <input type="text" id="newCategory" placeholder="輸入分類名稱">
     <button type="button" onclick="addCategory()">新增分類</button>
 </div>
-<div style="margin-top: 1em;">
+<div class="mt1">
     <label>管理分類（依類型）</label>
     <select id="manageType" onchange="renderCategoryManager()">
         <option value="income">收入</option>
         <option value="expense">支出</option>
     </select>
-    <ul id="categoryManagerList" style="list-style:none; padding:0;"></ul>
+    <ul id="categoryManagerList" class="category-manager-list" ></ul>
 </div>
 
 <div class="tools">
     <button onclick="exportCSV()">匯出 CSV</button>
 </div>
 
-<h2>月統計</h2>
+<h2><span id="monthStatsShow"></span> 月統計</h2>
 <div class="stats" id="monthlyStats"></div>
 
 <h2>記帳紀錄</h2>
@@ -139,10 +171,10 @@
         const monthEntries = entries.filter(e => e.date.startsWith(monthKey));
         const income = monthEntries.filter(e => e.type === 'income').reduce((sum, e) => sum + e.amount, 0);
         const expense = monthEntries.filter(e => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0);
+        document.getElementById('monthStatsShow').innerText = monthKey
         statsBox.innerHTML = `
-      <p>月份：${monthKey}</p>
-      <p>收入總和：<span class="income">$${income}</span></p>
-      <p>支出總和：<span class="expense">$${expense}</span></p>
+      <div>收入總和：<span class="income">$${income}</span></div>
+      <div>支出總和：<span class="expense">$${expense}</span></div>
     `;
     }
 
@@ -152,12 +184,11 @@
         const balance = totalIncome - totalExpense;
 
         document.getElementById('totalBalance').innerHTML = `
-    總收入：<span class="income">$${totalIncome}</span>，
-    總支出：<span class="expense">$${totalExpense}</span>，
-    總餘額：<span style="color:${balance >= 0 ? 'green' : 'red'}">$${balance}</span>
+    <li>總收入：<span class="income">$${totalIncome}</span></li>
+    <li>總支出：<span class="expense">$${totalExpense}</span></li>
+    <li>總餘額：<span style="color:${balance >= 0 ? 'green' : 'red'}">$${balance}</span></li>
   `;
     }
-
 
     function deleteEntry(index) {
         entries.splice(index, 1);
@@ -205,7 +236,7 @@
         document.body.removeChild(link);
     }
 
-    // 初始化載入
+    // 載入
     renderEntries();
 
     const defaultIncomeCategories = ['薪資', '投資', '其他'];
@@ -252,7 +283,7 @@
     // 監聽類型切換，動態變更分類選單
     typeSelect.addEventListener('change', updateCategoryOptions);
 
-    // 初始載入分類選單
+    // 載入分類選單
     updateCategoryOptions();
 
     function renderCategoryManager() {
@@ -264,7 +295,7 @@
         categories.forEach((cat, index) => {
 
             const li = document.createElement('li');
-            li.style = 'height: 50px;';
+            li.style = '';
             li.innerHTML = `
       <span>${cat}</span>
       <span class="btn" onclick="deleteCategory('${type}', ${index})" style="margin-left:10px;">刪除</span>
@@ -283,7 +314,7 @@
         }
     }
 
-    // 初始載入分類管理器
+    // 載入分類管理器
     renderCategoryManager();
 
 
