@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>進階手機記帳本</title>
+    <style>
+        body { font-family: sans-serif; padding: 1em; background: #f0f0f0; }
+        h1, h2 { text-align: center; }
+        form, .stats, .tools { margin-bottom: 1em; }
+        input, select, button {
+            width: 100%; padding: 10px; margin-top: 5px;
+            font-size: 16px; border-radius: 5px; border: 1px solid #ccc;
+        }
+        .entry-list li {
+            background: #fff; margin-bottom: 5px; padding: 10px;
+            border-radius: 5px; display: flex; justify-content: space-between;
+        }
+        .income { color: green; } .expense { color: red; }
+        .tools button { margin-bottom: 5px; }
+        .btn {
+            padding: 10px; margin-top: 5px;
+            background: red;
+            color: white;
+            font-size: 16px; border-radius: 5px; border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+
+<h1>手機記帳本</h1>
+<div id="totalBalance" style="text-align:center; font-size:18px; margin-bottom:1em; font-weight:bold;"></div>
+
+<div style="margin-bottom: 1em;">
+    <label for="calendar">選擇日期</label>
+    <input type="date" id="calendar" onchange="renderEntries()">
+    <button onclick="clearCalendar()">全部顯示</button>
+</div>
+
+<form id="entryForm">
+    <input type="text" id="desc" placeholder="項目描述" required>
+    <input type="number" id="amount" placeholder="金額" required>
+    <select id="type">
+        <option value="income">收入</option>
+        <option value="expense">支出</option>
+    </select>
+    <select id="category">
+        <option value="餐飲">餐飲</option>
+        <option value="交通">交通</option>
+        <option value="娛樂">娛樂</option>
+        <option value="生活">生活</option>
+        <option value="其他">其他</option>
+    </select>
+    <button type="submit">新增記錄</button>
+</form>
+<div style="margin-bottom: 1em;">
+    <label for="newCategory">新增分類（會依收入/支出分類）</label>
+    <input type="text" id="newCategory" placeholder="輸入分類名稱">
+    <button type="button" onclick="addCategory()">新增分類</button>
+</div>
+<div style="margin-top: 1em;">
+    <label>管理分類（依類型）</label>
+    <select id="manageType" onchange="renderCategoryManager()">
+        <option value="income">收入</option>
+        <option value="expense">支出</option>
+    </select>
+    <ul id="categoryManagerList" style="list-style:none; padding:0;"></ul>
+</div>
+
+<div class="tools">
+    <button onclick="exportCSV()">匯出 CSV</button>
+</div>
+
+<h2>月統計</h2>
+<div class="stats" id="monthlyStats"></div>
+
+<h2>記帳紀錄</h2>
+<ul id="entryList" class="entry-list"></ul>
+
+<script>
+    const form = document.getElementById('entryForm');
+    const entryList = document.getElementById('entryList');
+    const statsBox = document.getElementById('monthlyStats');
+    const descInput = document.getElementById('desc');
+    const amountInput = document.getElementById('amount');
+    const typeSelect = document.getElementById('type');
+    const categorySelect = document.getElementById('category');
+
+    // base64 encode/decode for simple obfuscation
+    const encode = (str) => btoa(unescape(encodeURIComponent(str)));
+    const decode = (str) => decodeURIComponent(escape(atob(str)));
+
+    function loadEntries() {
+        try {
+            const raw = localStorage.getItem('encrypted_entries');
+            return raw ? JSON.parse(decode(raw)) : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function saveEntries(entries) {
+        const encrypted = encode(JSON.stringify(entries));
+        localStorage.setItem('encrypted_entries', encrypted);
+    }
+
+    let entries = loadEntries();
+
+    function renderEntries() {
+        entryList.innerHTML = '';
+        const selectedDate = document.getElementById('calendar').value;
+        const filtered = selectedDate
+            ? entries.filter(e => e.date === selectedDate)
+            : entries;
+
+        filtered.forEach((entry, index) => {
+            const li = document.createElement('li');
+            li.innerHTML = `
+      <span>${entry.date} - ${entry.desc} (${entry.category})
+        <strong class="${entry.type}">${entry.type === 'income' ? '+' : '-'}$${entry.amount}</strong></span>
+      <div class="btn" onclick="deleteEntry(${index})">刪除</div>`;
+            entryList.appendChild(li);
+        });
+
+        renderStats();
+        renderBalance();
+    }
+
+    function clearCalendar() {
+        document.getElementById('calendar').value = '';
+        renderEntries();
+    }
+
+    function renderStats() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const monthKey = `${year}-${month}`;
+        const monthEntries = entries.filter(e => e.date.startsWith(monthKey));
+        const income = monthEntries.filter(e => e.type === 'income').reduce((sum, e) => sum + e.amount, 0);
+        const expense = monthEntries.filter(e => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0);
+        statsBox.innerHTML = `
+      <p>月份：${monthKey}</p>
+      <p>收入總和：<span class="income">$${income}</span></p>
+      <p>支出總和：<span class="expense">$${expense}</span></p>
+    `;
+    }
+
+    function renderBalance() {
+        const totalIncome = entries.filter(e => e.type === 'income').reduce((sum, e) => sum + e.amount, 0);
+        const totalExpense = entries.filter(e => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0);
+        const balance = totalIncome - totalExpense;
+
+        document.getElementById('totalBalance').innerHTML = `
+    總收入：<span class="income">$${totalIncome}</span>，
+    總支出：<span class="expense">$${totalExpense}</span>，
+    總餘額：<span style="color:${balance >= 0 ? 'green' : 'red'}">$${balance}</span>
+  `;
+    }
+
+
+    function deleteEntry(index) {
+        entries.splice(index, 1);
+        saveEntries(entries);
+        renderEntries();
+    }
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const desc = descInput.value.trim();
+        const amount = parseFloat(amountInput.value);
+        const type = typeSelect.value;
+        const category = categorySelect.value;
+        const date = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+        if (!desc || isNaN(amount)) return;
+
+        entries.push({ desc, amount, type, category, date });
+        saveEntries(entries);
+        renderEntries();
+
+        descInput.value = '';
+        amountInput.value = '';
+    });
+
+    function exportCSV() {
+        const rows = [['日期', '描述', '金額', '類型', '分類']];
+        entries.forEach(e => {
+            let typeData
+            if (e.type === 'income') {
+                typeData = '收入'
+            }
+            if (e.type === 'expense') {
+                typeData = '支出'
+            }
+            rows.push([e.date, e.desc, e.amount, typeData, e.category]);
+        });
+        const csvContent = rows.map(e => e.join(',')).join('\n');
+        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "記帳紀錄.csv";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // 初始化載入
+    renderEntries();
+
+    const defaultIncomeCategories = ['薪資', '投資', '其他'];
+    const defaultExpenseCategories = ['餐飲', '交通', '娛樂', '生活'];
+
+    function getCategories(type) {
+        const stored = JSON.parse(localStorage.getItem(`categories_${type}`));
+        return stored || (type === 'income' ? [...defaultIncomeCategories] : [...defaultExpenseCategories]);
+    }
+
+    function saveCategories(type, categories) {
+        localStorage.setItem(`categories_${type}`, JSON.stringify(categories));
+    }
+
+    function updateCategoryOptions() {
+        const type = typeSelect.value;
+        const categories = getCategories(type);
+        categorySelect.innerHTML = '';
+        categories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat;
+            option.textContent = cat;
+            categorySelect.appendChild(option);
+        });
+    }
+
+    function addCategory() {
+        const newCat = document.getElementById('newCategory').value.trim();
+        const currentType = typeSelect.value;
+        if (!newCat) return;
+
+        const existing = getCategories(currentType);
+        if (existing.includes(newCat)) {
+            alert("分類已存在！");
+            return;
+        }
+
+        existing.push(newCat);
+        saveCategories(currentType, existing);
+        updateCategoryOptions();
+        document.getElementById('newCategory').value = '';
+    }
+
+    // 監聽類型切換，動態變更分類選單
+    typeSelect.addEventListener('change', updateCategoryOptions);
+
+    // 初始載入分類選單
+    updateCategoryOptions();
+
+    function renderCategoryManager() {
+        const type = document.getElementById('manageType').value;
+        const list = document.getElementById('categoryManagerList');
+        const categories = getCategories(type);
+        list.innerHTML = '';
+
+        categories.forEach((cat, index) => {
+
+            const li = document.createElement('li');
+            li.style = 'height: 50px;';
+            li.innerHTML = `
+      <span>${cat}</span>
+      <span class="btn" onclick="deleteCategory('${type}', ${index})" style="margin-left:10px;">刪除</span>
+    `;
+            list.appendChild(li);
+        });
+    }
+
+    function deleteCategory(type, index) {
+        const categories = getCategories(type);
+        if (confirm(`確定刪除分類「${categories[index]}」？`)) {
+            categories.splice(index, 1);
+            saveCategories(type, categories);
+            renderCategoryManager();
+            if (typeSelect.value === type) updateCategoryOptions();
+        }
+    }
+
+    // 初始載入分類管理器
+    renderCategoryManager();
+
+
+</script>
+</body>
+</html>
+
