@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>進階手機記帳本</title>
+    <title>手機記帳本(一頁式)</title>
     <style>
         body { font-family: sans-serif; padding: 1em; background: #f0f0f0; }
         h1, h2 { text-align: center; }
@@ -12,9 +12,18 @@
             width: 100%;
             padding: 10px;
             margin-top: 5px;
-            font-size: 16px;
             border-radius: 5px;
-            border: 1px solid #ccc;
+            display: inline-flex;
+            align-items: center;
+            box-sizing: border-box;
+            position: relative;
+            border: 1px solid #000;
+            height: 40px;
+            min-width: 50px;
+            font-size: 14px;
+        }
+        input[type="text"], input[type="number"], input[type="date"] {
+
         }
         .entry-list {
             padding: 0;
@@ -29,10 +38,13 @@
         .income { color: green; } .expense { color: red; }
         .tools button { margin-bottom: 5px; }
         .btn {
-            padding: 10px; margin-top: 5px;
+            padding: 10px;
+            margin-top: 5px;
+            width: 9vw;
             background: red;
             color: white;
-            font-size: 16px; border-radius: 5px; border: 1px solid #ccc;
+            font-size: 12px; border-radius: 5px; border: 1px solid #ccc;
+            text-align: center;
         }
         .total-balance {
             padding: 0;
@@ -56,7 +68,11 @@
         .mt1 {
             margin-top: 1em;
         }
+        .footer {
+            margin-top: 3em;
+        }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -103,13 +119,30 @@
     <button onclick="exportCSV()">匯出 CSV</button>
 </div>
 
+<h2>收支分類圖表</h2>
+<canvas id="categoryChart" style="max-width: 100%; height: 300px;"></canvas>
+
 <h2><span id="monthStatsShow"></span> 月統計</h2>
 <div class="stats" id="monthlyStats"></div>
+
+<div style="margin-bottom: 1em;">
+    <label for="searchInput">搜尋記錄</label>
+    <input type="text" id="searchInput" placeholder="輸入關鍵字…" oninput="renderEntries()">
+</div>
 
 <h2>記帳紀錄</h2>
 <ul id="entryList" class="entry-list"></ul>
 
-<script>
+<footer class="footer">
+    <hr>
+    <div style="text-align: center">
+        <a href="https://github.com/AIKULIN/mobile_ledger" target="_blank">
+            <img alt="Static Badge" src="https://img.shields.io/badge/%E6%89%8B%E6%A9%9F%E8%A8%98%E5%B8%B3%E6%9C%AC-2025© By AIKULIN-blue?style=for-the-badge&logo=github">
+        </a>
+    </div>
+</footer>
+
+<script type="application/javascript">
     const form = document.getElementById('entryForm');
     const entryList = document.getElementById('entryList');
     const statsBox = document.getElementById('monthlyStats');
@@ -141,22 +174,129 @@
     function renderEntries() {
         entryList.innerHTML = '';
         const selectedDate = document.getElementById('calendar').value;
-        const filtered = selectedDate
-            ? entries.filter(e => e.date === selectedDate)
-            : entries;
 
-        filtered.forEach((entry, index) => {
-            const li = document.createElement('li');
-            li.innerHTML = `
-      <span>${entry.date} - ${entry.desc} (${entry.category})
+        const searchKeyword = document.getElementById('searchInput').value.trim().toLowerCase();
+
+        const filtered = entries.filter(e => {
+            const matchDate = !selectedDate || e.date === selectedDate;
+            const matchKeyword = !searchKeyword || e.desc.toLowerCase().includes(searchKeyword);
+            return matchDate && matchKeyword;
+        });
+
+        const grouped = {};
+
+        filtered.forEach(entry => {
+            const key = `${entry.type}-${entry.category}`;
+            if (!grouped[key]) grouped[key] = [];
+            grouped[key].push(entry);
+        });
+
+        Object.keys(grouped).forEach((key, index) => {
+            const [type, category] = key.split('-');
+            const groupEntries = grouped[key];
+            const sum = groupEntries.reduce((sum, e) => sum + e.amount, 0);
+            const title = `${type === 'income' ? '收入' : '支出'} - ${category}（小計：$${sum}）`;
+            const id = `group-${index}`;
+
+            const header = document.createElement('li');
+            header.style.background = '#ddd';
+            header.style.padding = '10px';
+            header.style.cursor = 'pointer';
+            header.style.fontWeight = 'bold';
+            header.textContent = title;
+            header.setAttribute('onclick', `toggleGroup('${id}')`);
+            entryList.appendChild(header);
+
+            const ul = document.createElement('ul');
+            ul.id = id;
+            ul.style.display = 'none';
+            ul.style.paddingLeft = '1em';
+            ul.style.listStyle = 'none';
+
+            grouped[key].forEach((entry, i) => {
+                const li = document.createElement('li');
+                li.className = 'entry';
+                li.innerHTML = `<span>${entry.date} - ${entry.desc} (${entry.category})
         <strong class="${entry.type}">${entry.type === 'income' ? '+' : '-'}$${entry.amount}</strong></span>
       <div class="btn" onclick="deleteEntry(${index})">刪除</div>`;
-            entryList.appendChild(li);
+                ul.appendChild(li);
+            });
+
+
+            entryList.appendChild(ul);
         });
 
         renderStats();
         renderBalance();
+        renderCategoryChart();
     }
+
+    // 折疊/展開分類群組
+    function toggleGroup(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+
+
+    function renderCategoryChart() {
+        const incomeData = {};
+        const expenseData = {};
+
+        entries.forEach(entry => {
+            const { type, category, amount } = entry;
+            if (type === 'income') {
+                incomeData[category] = (incomeData[category] || 0) + amount;
+            } else {
+                expenseData[category] = (expenseData[category] || 0) + amount;
+            }
+        });
+
+        const labels = [
+            ...Object.keys(incomeData).map(cat => `收入-${cat}`),
+            ...Object.keys(expenseData).map(cat => `支出-${cat}`)
+        ];
+        const data = [
+            ...Object.values(incomeData),
+            ...Object.values(expenseData)
+        ];
+
+        if (window.categoryChartInstance) {
+            window.categoryChartInstance.destroy(); // 避免重複繪圖
+        }
+
+        const ctx = document.getElementById('categoryChart').getContext('2d');
+        window.categoryChartInstance = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels,
+                datasets: [{
+                    data,
+                    backgroundColor: labels.map(() => getRandomColor())
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: { callbacks: {
+                            label: function(context) {
+                                return `${context.label}: $${context.raw}`;
+                            }
+                        }}
+                }
+            }
+        });
+    }
+
+    // 隨機顏色
+    function getRandomColor() {
+        const r = Math.floor(Math.random() * 200);
+        const g = Math.floor(Math.random() * 200);
+        const b = Math.floor(Math.random() * 200);
+        return `rgb(${r}, ${g}, ${b})`;
+    }
+
 
     function clearCalendar() {
         document.getElementById('calendar').value = '';
