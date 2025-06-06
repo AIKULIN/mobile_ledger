@@ -218,7 +218,7 @@
                 li.className = 'entry';
                 li.innerHTML = `<span>${entry.date} - ${entry.desc} (${entry.category})
         <strong class="${entry.type}">${entry.type === 'income' ? '+' : '-'}$${entry.amount}</strong></span>
-      <div class="btn" onclick="deleteEntry(${index})">刪除</div>`;
+      <div class="btn" onclick="deleteEntry(${entries.indexOf(entry)})">刪除</div>`;
                 ul.appendChild(li);
             });
 
