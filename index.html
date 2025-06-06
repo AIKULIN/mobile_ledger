@@ -80,8 +80,8 @@
 <ul id="totalBalance" class="total-balance"></ul>
 
 <div class="mb1">
-    <label for="calendar">選擇日期</label>
-    <input type="date" id="calendar" onchange="renderEntries()">
+    <label for="calendar">選擇月份</label>
+    <input type="month" id="calendar" onchange="renderEntries()">
     <button onclick="clearCalendar()">全部顯示</button>
 </div>
 
@@ -173,14 +173,14 @@
 
     function renderEntries() {
         entryList.innerHTML = '';
-        const selectedDate = document.getElementById('calendar').value;
+        const selectedMonth = document.getElementById('calendar').value;
 
         const searchKeyword = document.getElementById('searchInput').value.trim().toLowerCase();
 
         const filtered = entries.filter(e => {
-            const matchDate = !selectedDate || e.date === selectedDate;
+            const matchMonth = !selectedMonth || e.date.startsWith(selectedMonth);
             const matchKeyword = !searchKeyword || e.desc.toLowerCase().includes(searchKeyword);
-            return matchDate && matchKeyword;
+            return matchMonth && matchKeyword;
         });
 
         const grouped = {};
@@ -240,10 +240,21 @@
 
 
     function renderCategoryChart() {
+        const selectedMonth = document.getElementById('calendar').value;
+        let monthKey = selectedMonth;
+        if (!monthKey) {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            monthKey = `${year}-${month}`;
+        }
+
         const incomeData = {};
         const expenseData = {};
 
-        entries.forEach(entry => {
+        const monthEntries = entries.filter(e => e.date.startsWith(monthKey));
+
+        monthEntries.forEach(entry => {
             const { type, category, amount } = entry;
             if (type === 'income') {
                 incomeData[category] = (incomeData[category] || 0) + amount;
@@ -304,10 +315,14 @@
     }
 
     function renderStats() {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const monthKey = `${year}-${month}`;
+        const selectedMonth = document.getElementById('calendar').value;
+        let monthKey = selectedMonth;
+        if (!monthKey) {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            monthKey = `${year}-${month}`;
+        }
         const monthEntries = entries.filter(e => e.date.startsWith(monthKey));
         const income = monthEntries.filter(e => e.type === 'income').reduce((sum, e) => sum + e.amount, 0);
         const expense = monthEntries.filter(e => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0);
