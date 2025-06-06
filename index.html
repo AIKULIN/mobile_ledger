@@ -86,21 +86,10 @@
         .footer {
             margin-top: 3em;
         }
-        .wrapper2 {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            border: 2px solid #000;
-            padding: 10px;
-            border-radius: 8px;
-            background: #f8f8f8;
-        }
-
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-<div class="wrapper2" id="container"></div>
 
 <h1>手機記帳本</h1>
 <ul id="totalBalance" class="total-balance"></ul>
@@ -174,15 +163,6 @@
 </footer>
 
 <script type="application/javascript">
-    const container = document.getElementById('container');
-
-    for (let i = 1; i <= 9; i++) {
-        const div = document.createElement('div');
-        div.className = 'item2';
-        div.textContent = '項目 ' + i;
-        container.appendChild(div);
-    }
-
     const form = document.getElementById('entryForm');
     const entryList = document.getElementById('entryList');
     const statsBox = document.getElementById('monthlyStats');
