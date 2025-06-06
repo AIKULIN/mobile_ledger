@@ -240,10 +240,21 @@
 
 
     function renderCategoryChart() {
+        const selectedMonth = document.getElementById('calendar').value;
+        let monthKey = selectedMonth;
+        if (!monthKey) {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            monthKey = `${year}-${month}`;
+        }
+
         const incomeData = {};
         const expenseData = {};
 
-        entries.forEach(entry => {
+        const monthEntries = entries.filter(e => e.date.startsWith(monthKey));
+
+        monthEntries.forEach(entry => {
             const { type, category, amount } = entry;
             if (type === 'income') {
                 incomeData[category] = (incomeData[category] || 0) + amount;
