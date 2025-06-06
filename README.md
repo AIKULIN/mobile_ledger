@@ -17,6 +17,5 @@
 1. 新增按月份檢視記錄功能(ChatGpt codex)
 2. 收支分類圖表依月份顯示(ChatGpt codex)
 3. 調整版型
-#### 20250607 調整功能
-1. 新增可指定日期記錄(ChatGpt codex)
+4. 新增可指定日期記錄(ChatGpt codex)
 
