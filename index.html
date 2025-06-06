@@ -86,6 +86,7 @@
         .footer {
             margin-top: 3em;
         }
+
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -163,6 +164,7 @@
 </footer>
 
 <script type="application/javascript">
+
     const form = document.getElementById('entryForm');
     const entryList = document.getElementById('entryList');
     const statsBox = document.getElementById('monthlyStats');
@@ -192,14 +194,20 @@
 
     let entries = loadEntries();
 
-    function renderEntries() {
+    function renderEntries(showAll = false) {
         entryList.innerHTML = '';
-        const selectedMonth = document.getElementById('calendar').value;
+        let monthKey = document.getElementById('calendar').value;
+        if (!monthKey && !showAll) {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            monthKey = `${year}-${month}`;
+        }
 
         const searchKeyword = document.getElementById('searchInput').value.trim().toLowerCase();
 
         const filtered = entries.filter(e => {
-            const matchMonth = !selectedMonth || e.date.startsWith(selectedMonth);
+            const matchMonth = showAll ? true : e.date.startsWith(monthKey);
             const matchKeyword = !searchKeyword || e.desc.toLowerCase().includes(searchKeyword);
             return matchMonth && matchKeyword;
         });
@@ -332,7 +340,7 @@
 
     function clearCalendar() {
         document.getElementById('calendar').value = '';
-        renderEntries();
+        renderEntries(true);
     }
 
     function renderStats() {
@@ -413,6 +421,7 @@
     }
 
     // 載入
+    document.getElementById('calendar').value = new Date().toISOString().slice(0, 7);
     renderEntries();
 
     const defaultIncomeCategories = ['薪資', '投資', '其他'];
