@@ -17,7 +17,7 @@
             align-items: center;
             box-sizing: border-box;
             position: relative;
-            border: 1px solid #000;
+            border: 2px solid #333030;
             height: 40px;
             min-width: 50px;
             font-size: 14px;
@@ -37,14 +37,36 @@
         }
         .income { color: green; } .expense { color: red; }
         .tools button { margin-bottom: 5px; }
+        .btn-del {
+            padding: 5px;
+            background: red;
+            color: white;
+            font-size: 12px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
         .btn {
             padding: 10px;
             margin-top: 5px;
-            width: 9vw;
-            background: red;
-            color: white;
-            font-size: 12px; border-radius: 5px; border: 1px solid #ccc;
+            border-radius: 5px;
+            justify-content: center;
+        }
+        .wrapper {
+            flex-wrap: wrap;
+            margin-top: 5px;
+            display: flex;              /* 讓子元素併排 */
+            border: 2px solid #333;     /* 外框線 */
+            padding: 10px;
+            border-radius: 8px;         /* 可選：圓角 */
+            gap: 10px;                  /* 子元素間距 */
+        }
+        .item {
+            padding: 10px;
+            background-color: #eee;
+            border: 1px solid #ccc;
             text-align: center;
+            border-radius: 8px;
+            width: calc((100% - 20px) / 3); /* 超過比例換行 */
         }
         .total-balance {
             padding: 0;
@@ -55,13 +77,6 @@
             font-size:18px;
             font-weight:bold;
         }
-        .category-manager-list {
-            list-style:none;
-            padding:0;
-        }
-        .category-manager-list li {
-            height: 50px;
-        }
         .mb1 {
             margin-bottom: 1em;
         }
@@ -71,18 +86,30 @@
         .footer {
             margin-top: 3em;
         }
+        .wrapper2 {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            border: 2px solid #000;
+            padding: 10px;
+            border-radius: 8px;
+            background: #f8f8f8;
+        }
+
     </style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+<div class="wrapper2" id="container"></div>
 
 <h1>手機記帳本</h1>
 <ul id="totalBalance" class="total-balance"></ul>
 
+
 <div class="mb1">
-    <label for="calendar">選擇日期</label>
-    <input type="date" id="calendar" onchange="renderEntries()">
-    <button onclick="clearCalendar()">全部顯示</button>
+    <label for="calendar">選擇月份</label>
+    <input type="month" id="calendar" onchange="renderEntries()">
+    <button class="btn" onclick="clearCalendar()">全部顯示</button>
 </div>
 
 <form id="entryForm">
@@ -99,12 +126,16 @@
         <option value="生活">生活</option>
         <option value="其他">其他</option>
     </select>
-    <button type="submit">新增記錄</button>
+    <button class="btn" type="submit">新增記錄</button>
 </form>
 <div class="mb1">
     <label for="newCategory">新增分類（會依收入/支出分類）</label>
+    <select id="categoryType">
+        <option value="income">收入</option>
+        <option value="expense">支出</option>
+    </select>
     <input type="text" id="newCategory" placeholder="輸入分類名稱">
-    <button type="button" onclick="addCategory()">新增分類</button>
+    <button class="btn" type="button" onclick="addCategory()">新增分類</button>
 </div>
 <div class="mt1">
     <label>管理分類（依類型）</label>
@@ -112,11 +143,11 @@
         <option value="income">收入</option>
         <option value="expense">支出</option>
     </select>
-    <ul id="categoryManagerList" class="category-manager-list" ></ul>
+    <div id="categoryManagerList" class="wrapper"></div>
 </div>
 
 <div class="tools">
-    <button onclick="exportCSV()">匯出 CSV</button>
+    <button class="btn" onclick="exportCSV()">匯出 CSV</button>
 </div>
 
 <h2>收支分類圖表</h2>
@@ -143,12 +174,22 @@
 </footer>
 
 <script type="application/javascript">
+    const container = document.getElementById('container');
+
+    for (let i = 1; i <= 9; i++) {
+        const div = document.createElement('div');
+        div.className = 'item2';
+        div.textContent = '項目 ' + i;
+        container.appendChild(div);
+    }
+
     const form = document.getElementById('entryForm');
     const entryList = document.getElementById('entryList');
     const statsBox = document.getElementById('monthlyStats');
     const descInput = document.getElementById('desc');
     const amountInput = document.getElementById('amount');
     const typeSelect = document.getElementById('type');
+    const newCategoryTypeSelect = document.getElementById('categoryType');
     const categorySelect = document.getElementById('category');
 
     // base64 encode/decode for simple obfuscation
@@ -173,14 +214,14 @@
 
     function renderEntries() {
         entryList.innerHTML = '';
-        const selectedDate = document.getElementById('calendar').value;
+        const selectedMonth = document.getElementById('calendar').value;
 
         const searchKeyword = document.getElementById('searchInput').value.trim().toLowerCase();
 
         const filtered = entries.filter(e => {
-            const matchDate = !selectedDate || e.date === selectedDate;
+            const matchMonth = !selectedMonth || e.date.startsWith(selectedMonth);
             const matchKeyword = !searchKeyword || e.desc.toLowerCase().includes(searchKeyword);
-            return matchDate && matchKeyword;
+            return matchMonth && matchKeyword;
         });
 
         const grouped = {};
@@ -218,7 +259,7 @@
                 li.className = 'entry';
                 li.innerHTML = `<span>${entry.date} - ${entry.desc} (${entry.category})
         <strong class="${entry.type}">${entry.type === 'income' ? '+' : '-'}$${entry.amount}</strong></span>
-      <div class="btn" onclick="deleteEntry(${index})">刪除</div>`;
+      <div class="btn-del" onclick="deleteEntry(${entries.indexOf(entry)})">刪除</div>`;
                 ul.appendChild(li);
             });
 
@@ -240,10 +281,21 @@
 
 
     function renderCategoryChart() {
+        const selectedMonth = document.getElementById('calendar').value;
+        let monthKey = selectedMonth;
+        if (!monthKey) {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            monthKey = `${year}-${month}`;
+        }
+
         const incomeData = {};
         const expenseData = {};
 
-        entries.forEach(entry => {
+        const monthEntries = entries.filter(e => e.date.startsWith(monthKey));
+
+        monthEntries.forEach(entry => {
             const { type, category, amount } = entry;
             if (type === 'income') {
                 incomeData[category] = (incomeData[category] || 0) + amount;
@@ -304,10 +356,14 @@
     }
 
     function renderStats() {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const monthKey = `${year}-${month}`;
+        const selectedMonth = document.getElementById('calendar').value;
+        let monthKey = selectedMonth;
+        if (!monthKey) {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            monthKey = `${year}-${month}`;
+        }
         const monthEntries = entries.filter(e => e.date.startsWith(monthKey));
         const income = monthEntries.filter(e => e.type === 'income').reduce((sum, e) => sum + e.amount, 0);
         const expense = monthEntries.filter(e => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0);
@@ -405,7 +461,7 @@
 
     function addCategory() {
         const newCat = document.getElementById('newCategory').value.trim();
-        const currentType = typeSelect.value;
+        const currentType = newCategoryTypeSelect.value;
         if (!newCat) return;
 
         const existing = getCategories(currentType);
@@ -434,13 +490,14 @@
 
         categories.forEach((cat, index) => {
 
-            const li = document.createElement('li');
-            li.style = '';
-            li.innerHTML = `
+            const div = document.createElement('div');
+            div.className = 'item';
+            // div.style.width = 'calc(33.333% - 10px); '/* 3 欄併排，減掉間距 */
+            div.innerHTML = `
       <span>${cat}</span>
-      <span class="btn" onclick="deleteCategory('${type}', ${index})" style="margin-left:10px;">刪除</span>
+      <span class="btn-del" onclick="deleteCategory('${type}', ${index})" style="margin-left:10px;">刪除</span>
     `;
-            list.appendChild(li);
+            list.appendChild(div);
         });
     }
 
