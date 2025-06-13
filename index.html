@@ -506,6 +506,34 @@
     // 載入分類管理器
     renderCategoryManager();
 
+    // === 自動重新整理機制 ===
+    // 10 分鐘未操作或頁面隱藏後再次回到前景超過同樣時間就重新整理
+    let lastActivity = Date.now();
+    const INACTIVITY_LIMIT = 10 * 60 * 1000; // 10 分鐘
+
+    function resetActivity() {
+        lastActivity = Date.now();
+    }
+
+    ['mousemove', 'keydown', 'mousedown', 'touchstart'].forEach(evt => {
+        document.addEventListener(evt, resetActivity, { passive: true });
+    });
+
+    setInterval(() => {
+        if (Date.now() - lastActivity > INACTIVITY_LIMIT) {
+            location.reload();
+        }
+    }, 60000); // 每分鐘檢查一次
+
+    let hiddenAt = 0;
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+            hiddenAt = Date.now();
+        } else if (hiddenAt && Date.now() - hiddenAt > INACTIVITY_LIMIT) {
+            location.reload();
+        }
+    });
+
 
 </script>
 </body>
