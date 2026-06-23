@@ -1,0 +1,5 @@
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+SESSION_SECRET=replace-this-with-a-long-random-string
+# Local development uses the top-level APP_BASE_URL in wrangler.jsonc:
+# http://127.0.0.1:8787

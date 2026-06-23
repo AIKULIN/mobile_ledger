@@ -1,0 +1,22 @@
+{
+  "name": "mobile-ledger",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "sync:assets": "mkdir -p public && cp index.html public/index.html",
+    "dev": "wrangler dev",
+    "deploy": "npm run deploy:production",
+    "deploy:staging": "npm run sync:assets && wrangler deploy --env staging",
+    "deploy:production": "npm run sync:assets && wrangler deploy --env production",
+    "deploy:dry-run:staging": "npm run sync:assets && wrangler deploy --dry-run --env staging",
+    "deploy:dry-run:production": "npm run sync:assets && wrangler deploy --dry-run --env production",
+    "cf-typegen": "wrangler types",
+    "d1:migrate:local": "wrangler d1 migrations apply DB --local",
+    "d1:migrate:staging": "wrangler d1 migrations apply DB --remote --env staging",
+    "d1:migrate:production": "wrangler d1 migrations apply DB --remote --env production",
+    "predev": "npm run sync:assets"
+  },
+  "devDependencies": {
+    "wrangler": "^4.22.0"
+  }
+}
